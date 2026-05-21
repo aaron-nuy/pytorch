@@ -1,9 +1,10 @@
+// MT19937RNGEngine.h
+
 #pragma once
 
 #include <c10/util/irange.h>
 #include <c10/macros/Macros.h>
 
-// define constants like M_PI and C keywords for MSVC
 #ifdef _MSC_VER
 #ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
@@ -22,6 +23,27 @@ constexpr int MERSENNE_STATE_M = 397;
 constexpr uint32_t MATRIX_A = 0x9908b0df;
 constexpr uint32_t UMASK = 0x80000000;
 constexpr uint32_t LMASK = 0x7fffffff;
+
+enum class GeneratorType {
+  MT19937,
+  LCG,
+  PHILOX,
+  PCG
+};
+
+/**
+ * mt19937_data_pod is used to get POD data in and out
+ * of mt19937_engine. Used in torch.get_rng_state and
+ * torch.set_rng_state functions.
+ */
+struct mt19937_data_pod {
+  uint64_t seed_;
+  int left_;
+  bool seeded_;
+  uint32_t next_;
+  std::array<uint32_t, MERSENNE_STATE_N> state_;
+  GeneratorType rng_type_;
+};
 
 /**
  * Note [Mt19937 Engine implementation]
@@ -95,19 +117,6 @@ constexpr uint32_t LMASK = 0x7fffffff;
  * email: m-mat @ math.sci.hiroshima-u.ac.jp (remove space)
  */
 
-/**
- * mt19937_data_pod is used to get POD data in and out
- * of mt19937_engine. Used in torch.get_rng_state and
- * torch.set_rng_state functions.
- */
-struct mt19937_data_pod {
-  uint64_t seed_;
-  int left_;
-  bool seeded_;
-  uint32_t next_;
-  std::array<uint32_t, MERSENNE_STATE_N> state_;
-};
-
 class TORCH_API mt19937_engine {
 public:
 
@@ -139,4 +148,4 @@ private:
 
 typedef mt19937_engine mt19937;
 
-} // namespace at
+}
