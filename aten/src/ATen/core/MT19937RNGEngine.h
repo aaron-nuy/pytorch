@@ -1,6 +1,7 @@
 #pragma once
 
 #include <c10/util/irange.h>
+#include <c10/macros/Macros.h>
 
 // define constants like M_PI and C keywords for MSVC
 #ifdef _MSC_VER
@@ -107,7 +108,7 @@ struct mt19937_data_pod {
   std::array<uint32_t, MERSENNE_STATE_N> state_;
 };
 
-class mt19937_engine {
+class TORCH_API mt19937_engine {
 public:
 
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
