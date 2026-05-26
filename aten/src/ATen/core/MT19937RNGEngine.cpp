@@ -8,7 +8,7 @@
 namespace at {
 
 static const std::string PYTORCH_RNG_TYPE_ENV_VAR = "PYTORCH_RNG_TYPE";
-static const std::string PYTORCH_COUNT_RNG_ENV_VAR = "COUNT_RAND_CALLS";
+static const std::string PYTORCH_COUNT_RNG_ENV_VAR = "PYTORCH_COUNT_RAND_CALLS";
 
 static std::atomic<uint64_t> random_call_counter{0};
 
