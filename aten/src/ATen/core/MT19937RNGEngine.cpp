@@ -1,5 +1,6 @@
 #include <ATen/core/MT19937RNGEngine.h>
 #include <c10/util/irange.h>
+#include <atomic>
 #include <cstdint>
 #include <cstdlib>
 #include <string>
@@ -7,6 +8,28 @@
 namespace at {
 
 static const std::string PYTORCH_RNG_TYPE_ENV_VAR = "PYTORCH_RNG_TYPE";
+static const std::string PYTORCH_COUNT_RNG_ENV_VAR = "COUNT_RAND_CALLS";
+
+static std::atomic<uint64_t> random_call_counter{0};
+
+static bool should_count_calls() {
+  static const char* env_var = std::getenv(PYTORCH_COUNT_RNG_ENV_VAR.c_str());
+
+  if (env_var == nullptr) {
+    return false;
+  }
+
+  static const std::string val(env_var);
+  static const bool enabled = !(val.empty() || val == "NO" || val == "no" ||
+                                val == "0" ||
+                                val == "false" ||
+                                val == "FALSE" ||
+                                val == "OFF" ||
+                                val == "off");
+
+  return enabled;
+
+}
 
 GeneratorType get_rng_type();
 
@@ -192,6 +215,10 @@ bool mt19937_engine::is_valid() {
 }
 
 uint32_t mt19937_engine::operator()() {
+  if (should_count_calls()) {
+    random_call_counter.fetch_add(1, std::memory_order_relaxed);
+  }
+
   switch (data_.rng_type_) {
     case GeneratorType::LCG:
       return lcg_rng::next(data_);
@@ -247,4 +274,16 @@ void mt19937_engine::next_state() {
   *p = p[MERSENNE_STATE_M - MERSENNE_STATE_N] ^ twist(p[0], data_.state_[0]);
 }
 
+}
+
+extern "C" {
+  __attribute__((visibility("default"))) uint64_t get_pytorch_rng_call_count();
+  __attribute__((visibility("default"))) uint64_t get_pytorch_rng_call_count() {
+    return at::random_call_counter.load(std::memory_order_relaxed);
+  }
+
+  __attribute__((visibility("default"))) void reset_pytorch_rng_call_count();
+  __attribute__((visibility("default"))) void reset_pytorch_rng_call_count() {
+    at::random_call_counter.store(0, std::memory_order_relaxed);
+  }
 }
