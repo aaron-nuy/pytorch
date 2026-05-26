@@ -57,13 +57,13 @@ namespace lcg_rng {
   void init_seed(uint64_t seed, mt19937_data_pod& d) {
     d.seed_ = seed;
     d.seeded_ = true;
-    d.state_[0] = seed ? static_cast<uint32_t>(seed & 0xffffffff) : 1u;
+    d.state_[0] = seed ? static_cast<uint32_t>(seed % (1ULL << 31)) : 1u;
     d.left_ = 1;
     d.next_ = 0;
   }
 
   uint32_t next(mt19937_data_pod& d) {
-    d.state_[0] = 1664525u * d.state_[0] + 1013904223u;
+    d.state_[0] = static_cast<uint32_t>((65539ULL * d.state_[0]) % (1ULL << 31));
     return d.state_[0];
   }
 
