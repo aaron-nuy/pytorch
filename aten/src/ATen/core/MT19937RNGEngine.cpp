@@ -8,47 +8,15 @@
 namespace at {
 
 static const std::string PYTORCH_RNG_TYPE_ENV_VAR = "PYTORCH_RNG_TYPE";
-static const std::string PYTORCH_COUNT_RNG_ENV_VAR = "PYTORCH_COUNT_RAND_CALLS";
 
 static std::atomic<uint64_t> random_call_counter{0};
-
-static bool should_count_calls() {
-  static const char* env_var = std::getenv(PYTORCH_COUNT_RNG_ENV_VAR.c_str());
-
-  if (env_var == nullptr) {
-    return false;
-  }
-
-  static const std::string val(env_var);
-  static const bool enabled = !(val.empty() || val == "NO" || val == "no" ||
-                                val == "0" ||
-                                val == "false" ||
-                                val == "FALSE" ||
-                                val == "OFF" ||
-                                val == "off");
-
-  return enabled;
-
-}
+static std::atomic<GeneratorType> rng_type_selected{GeneratorType::MT19937};
 
 GeneratorType get_rng_type();
 
 GeneratorType get_rng_type() {
-  const char* env_var = std::getenv(PYTORCH_RNG_TYPE_ENV_VAR.c_str());
-  std::string env_var_string = env_var ? env_var : "";
-
-  if (env_var_string == "PCG")
-    return GeneratorType::PCG;
-
-  if (env_var_string == "PHILOX")
-    return GeneratorType::PHILOX;
-
-  if (env_var_string == "LCG")
-    return GeneratorType::LCG;
-
-  return GeneratorType::MT19937;
+  return rng_type_selected.load(std::memory_order_relaxed);
 }
-
 
 namespace mt19937_rng {
 
@@ -215,9 +183,7 @@ bool mt19937_engine::is_valid() {
 }
 
 uint32_t mt19937_engine::operator()() {
-  if (should_count_calls()) {
-    random_call_counter.fetch_add(1, std::memory_order_relaxed);
-  }
+   random_call_counter.fetch_add(1, std::memory_order_relaxed);
 
   switch (data_.rng_type_) {
     case GeneratorType::LCG:
@@ -286,4 +252,22 @@ extern "C" {
   __attribute__((visibility("default"))) void reset_pytorch_rng_call_count() {
     at::random_call_counter.store(0, std::memory_order_relaxed);
   }
+
+    __attribute__((visibility("default"))) void change_pytorch_selected_rng(const char* rng_type);
+    __attribute__((visibility("default"))) void change_pytorch_selected_rng(const char* rng_type) {
+      if (!rng_type)
+        return;
+
+      std::string type_str(rng_type);
+
+      if (type_str == "PCG") {
+        at::rng_type_selected.store(at::GeneratorType::PCG, std::memory_order_relaxed);
+      } else if (type_str == "PHILOX") {
+        at::rng_type_selected.store(at::GeneratorType::PHILOX, std::memory_order_relaxed);
+      } else if (type_str == "LCG") {
+        at::rng_type_selected.store(at::GeneratorType::LCG, std::memory_order_relaxed);
+      } else {
+        at::rng_type_selected.store(at::GeneratorType::MT19937, std::memory_order_relaxed);
+      }
+    }
 }
