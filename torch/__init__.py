@@ -2160,6 +2160,10 @@ from torch.random import (
     set_rng_state,
     thread_safe_generator,
 )
+
+get_rng_call_count = _C._get_rng_call_count
+reset_rng_call_count = _C._reset_rng_call_count
+change_rng_type = _C._change_rng_type
 from torch.serialization import load, save
 
 

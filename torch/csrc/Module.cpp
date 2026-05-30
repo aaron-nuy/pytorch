@@ -154,6 +154,10 @@
 
 namespace py = pybind11;
 
+extern "C" uint64_t get_pytorch_rng_call_count();
+extern "C" void reset_pytorch_rng_call_count();
+extern "C" void change_pytorch_selected_rng(const char* rng_type);
+
 static PyObject* module;
 
 static THPGenerator* THPDefaultCPUGenerator = nullptr;
@@ -278,6 +282,29 @@ static PyObject* THPModule_crashIfCsrcUBSAN(PyObject* module, PyObject* arg) {
   int32_t x = THPUtils_unpackInt(arg);
   double y = 1.0 / x;
   return THPUtils_packInt32(static_cast<int>(y));
+  END_HANDLE_TH_ERRORS
+}
+
+static PyObject* THPModule_getRngCallCount(PyObject*, PyObject*) {
+  HANDLE_TH_ERRORS
+  uint64_t count = get_pytorch_rng_call_count();
+  return PyLong_FromUnsignedLongLong(count);
+  END_HANDLE_TH_ERRORS
+}
+
+static PyObject* THPModule_resetRngCallCount(PyObject*, PyObject*) {
+  HANDLE_TH_ERRORS
+  reset_pytorch_rng_call_count();
+  Py_RETURN_NONE;
+  END_HANDLE_TH_ERRORS
+}
+
+static PyObject* THPModule_changeRngType(PyObject*, PyObject* arg) {
+  HANDLE_TH_ERRORS
+
+  const std::string type_str = THPUtils_unpackString(arg);
+  change_pytorch_selected_rng(type_str.c_str());
+  Py_RETURN_NONE;
   END_HANDLE_TH_ERRORS
 }
 
@@ -2268,6 +2295,9 @@ static std::initializer_list<PyMethodDef> TorchMethods = {
      THCPModule_ensureCUDADeviceGuardSet,
      METH_NOARGS,
      nullptr},
+    {"_get_rng_call_count", THPModule_getRngCallCount, METH_NOARGS, nullptr},
+    {"_reset_rng_call_count", THPModule_resetRngCallCount, METH_NOARGS, nullptr},
+    {"_change_rng_type", THPModule_changeRngType,     METH_O, nullptr},
     {nullptr, nullptr, 0, nullptr}
 
 };

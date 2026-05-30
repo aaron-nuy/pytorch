@@ -42,7 +42,15 @@ from torch._C import (
     _onnx,
     _VariableFunctions,
     _verbose,
+    _get_rng_call_count as get_rng_call_count,
+    _reset_rng_call_count as reset_rng_call_count,
+    _change_rng_type as change_rng_type
 )
+
+def get_rng_call_count() -> int: ...
+def reset_rng_call_count() -> None: ...
+def change_rng_type(rng_type: str) -> None: ...
+
 from torch._prims_common import DeviceLikeType
 from torch.autograd.graph import Node as _Node
 from torch.cuda import _POOL_HANDLE
